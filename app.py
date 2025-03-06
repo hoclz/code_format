@@ -14,12 +14,12 @@ st.markdown(
     <style>
     /* Outer rectangle for entire page content */
     .outer-page-container {
-        border: 2px solid #ccc;
+        border: none;
         border-radius: 10px;
         padding: 30px;
         margin-bottom: 20px;
         background-color: #FFFFFF;
-        box-shadow: 2px 2px 8px rgba(0,0,0,0.07);
+        box-shadow: none;
     }
     /* Vertical dividers between columns */
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
@@ -103,10 +103,12 @@ def fix_block_indentation(raw_code: str, indent_size: int = 4) -> str:
 def main():
     st.markdown('<div class="outer-page-container">', unsafe_allow_html=True)
     st.title("Python Code Formatter Pro")
-    st.markdown("""
+    st.markdown(
+        """
         **Format, fix, and optimize your Python code effortlessly.**  
         Upload, paste, or provide a URL to your Python code, and let the tool handle the rest.
-    """)
+        """
+    )
 
     # Ensure these session variables exist
     if "input_code" not in st.session_state:
@@ -131,13 +133,11 @@ def main():
         # If user clicks Clear Input, we just reset the 'input_code' in session
         if st.button("🗑️ Clear Input"):
             st.session_state["input_code"] = ""
-            # Optional: st.experimental_rerun() to immediately reflect changes
 
         code_input_temp = st.session_state["input_code"]  # A temp local copy
 
         # We'll present the text area or handle file/URL below:
         if input_mode == "📋 Paste Code":
-            # Instead of giving the text area the same session key, we pass in 'value='
             code_input_temp = st.text_area(
                 "Paste your Python code below:",
                 value=code_input_temp,
