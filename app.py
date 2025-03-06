@@ -12,11 +12,12 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Remove top padding/margin for the main container */
+    /* Pull the main container further up */
     .block-container {
         padding-top: 0rem !important;
-        margin-top: 0rem !important;
+        margin-top: -2rem !important;
     }
+
     /* Outer rectangle for entire page content (no borders, no shadow) */
     .outer-page-container {
         border: none;
@@ -26,6 +27,7 @@ st.markdown(
         background-color: #FFFFFF;
         box-shadow: none;
     }
+
     /* Vertical dividers between columns */
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
         border-right: 2px solid #ccc;
@@ -37,10 +39,12 @@ st.markdown(
         padding-right: 20px !important;
         margin-right: 20px !important;
     }
+
     /* Text area background color */
     div.stTextArea textarea {
         background-color: #F0F0F8;
     }
+
     /* A custom bottom horizontal line inside the container */
     .bottom-line {
         border: none;
