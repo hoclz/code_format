@@ -15,7 +15,7 @@ st.markdown(
     /* Pull the main container further up */
     .block-container {
         padding-top: 0rem !important;
-        margin-top: -2rem !important;
+        margin-top: -2.2rem !important;
     }
 
     /* Outer rectangle for entire page content (no borders, no shadow) */
