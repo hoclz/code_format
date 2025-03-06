@@ -8,11 +8,16 @@ st.set_page_config(
     page_icon=":snake:"
 )
 
-# ----- Custom CSS for layout, borders, and lines -----
+# ----- Custom CSS for layout, borders, lines, and top offset -----
 st.markdown(
     """
     <style>
-    /* Outer rectangle for entire page content */
+    /* Remove top padding/margin for the main container */
+    .block-container {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important;
+    }
+    /* Outer rectangle for entire page content (no borders, no shadow) */
     .outer-page-container {
         border: none;
         border-radius: 10px;
