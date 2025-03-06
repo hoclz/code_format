@@ -8,10 +8,15 @@ st.set_page_config(
     page_icon=":snake:"
 )
 
-# ----- Custom CSS for layout, borders, and lines -----
+# ----- Custom CSS for layout, borders, and pushing up the UI ----- 
 st.markdown(
     """
     <style>
+    /* Push the app view container up by reducing its top padding */
+    [data-testid="stAppViewContainer"] {
+        padding-top: 10px;  /* Adjust this value as needed */
+    }
+    
     /* Outer rectangle for entire page content */
     .outer-page-container {
         border: 2px solid #ccc;
@@ -21,6 +26,7 @@ st.markdown(
         background-color: #FFFFFF;
         box-shadow: 2px 2px 8px rgba(0,0,0,0.07);
     }
+    
     /* Vertical dividers between columns */
     div[data-testid="stHorizontalBlock"] > div:nth-child(1) {
         border-right: 2px solid #ccc;
@@ -32,10 +38,12 @@ st.markdown(
         padding-right: 20px !important;
         margin-right: 20px !important;
     }
+    
     /* Text area background color */
     div.stTextArea textarea {
         background-color: #F0F0F8;
     }
+    
     /* A custom bottom horizontal line inside the container */
     .bottom-line {
         border: none;
@@ -110,9 +118,9 @@ def main():
 
     # Ensure these session variables exist
     if "input_code" not in st.session_state:
-        st.session_state["input_code"] = ""  # For user input
+        st.session_state["input_code"] = ""
     if "formatted_code" not in st.session_state:
-        st.session_state["formatted_code"] = ""  # For processed output
+        st.session_state["formatted_code"] = ""
 
     st.markdown("---")
 
@@ -128,27 +136,21 @@ def main():
             horizontal=False
         )
 
-        # If user clicks Clear Input, we just reset the 'input_code' in session
         if st.button("🗑️ Clear Input"):
             st.session_state["input_code"] = ""
-            # Optional: st.experimental_rerun() to immediately reflect changes
 
-        code_input_temp = st.session_state["input_code"]  # A temp local copy
+        code_input_temp = st.session_state["input_code"]
 
-        # We'll present the text area or handle file/URL below:
         if input_mode == "📋 Paste Code":
-            # Instead of giving the text area the same session key, we pass in 'value='
             code_input_temp = st.text_area(
                 "Paste your Python code below:",
                 value=code_input_temp,
                 height=300
             )
-
         elif input_mode == "📁 Upload File":
             uploaded_file = st.file_uploader("Upload a .py file", type=["py"])
             if uploaded_file is not None:
                 code_input_temp = uploaded_file.read().decode("utf-8")
-
         else:  # "🌐 Fetch from URL"
             code_url = st.text_input("Enter the URL of your Python file:")
             if code_url:
@@ -161,7 +163,6 @@ def main():
                 except Exception as e:
                     st.error(f"Error fetching file: {e}")
 
-        # Update session state with the final input
         st.session_state["input_code"] = code_input_temp
 
     # =============== Section 2: Configuration =============== #
@@ -184,13 +185,10 @@ def main():
         if st.button("✨ Format & Refine Code"):
             raw_code = st.session_state["input_code"].strip()
             if raw_code:
-                # Step 1: Preprocess uppercase keywords
                 step1_code = preprocess_code(raw_code)
-                # Step 2: Attempt block indentation fixes
                 step2_code = step1_code
                 for _ in range(block_fix_passes):
                     step2_code = fix_block_indentation(step2_code, indent_size=4)
-                # Step 3: Attempt autopep8 formatting
                 try:
                     pass1 = autopep8.fix_code(
                         step2_code,
@@ -235,7 +233,6 @@ def main():
             disabled=(not st.session_state["formatted_code"].strip())
         )
 
-    # A bottom horizontal line inside the container
     st.markdown('<hr class="bottom-line" />', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
