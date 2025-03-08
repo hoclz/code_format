@@ -4,7 +4,7 @@ import requests
 
 st.set_page_config(
     layout="wide",
-    page_title="Python Code Formatter Pro",
+    page_title="Multi-Language Code Formatter Pro",
     page_icon=":snake:"
 )
 
@@ -56,8 +56,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --------------------- Utility Functions --------------------- #
-def preprocess_code(raw_code: str) -> str:
+
+# -------------------- Utility Functions -------------------- #
+
+def preprocess_code_python(raw_code: str) -> str:
+    """
+    For Python code only:
+    - Convert uppercase 'If', 'Else:' etc. to lowercase 'if', 'else:' to fix
+      partial syntax problems.
+    """
     replacements = {
         "Else:": "else:",
         "Elif ": "elif ",
@@ -74,7 +81,12 @@ def preprocess_code(raw_code: str) -> str:
         new_lines.append(line)
     return "".join(new_lines)
 
-def fix_block_indentation(raw_code: str, indent_size: int = 4) -> str:
+
+def fix_block_indentation_python(raw_code: str, indent_size: int = 4) -> str:
+    """
+    A simplified approach to fix indentation for Python block structures.
+    This is not a perfect solution but helps in some basic cases.
+    """
     lines = raw_code.splitlines()
     block_keywords = (
         "if ", "elif ", "else:", "for ", "while ",
@@ -97,9 +109,11 @@ def fix_block_indentation(raw_code: str, indent_size: int = 4) -> str:
                 while j < len(processed_lines):
                     next_line, next_indent = processed_lines[j]
                     next_stripped = next_line.strip()
-                    if next_stripped == "":
+                    # Skip blank lines
+                    if not next_stripped:
                         j += 1
                         continue
+                    # If next line is not more-indented, fix it
                     if next_indent <= indent_level:
                         needed_indent = indent_level + indent_size
                         new_line = " " * needed_indent + next_stripped
@@ -108,22 +122,148 @@ def fix_block_indentation(raw_code: str, indent_size: int = 4) -> str:
         i += 1
     return "\n".join(item[0] for item in processed_lines)
 
+
+def format_python_code(raw_code: str, block_fix_passes: int) -> str:
+    """
+    Full pipeline for Python code formatting:
+      1) Preprocess uppercase keywords
+      2) Attempt repeated block indentation fixes
+      3) Use autopep8 for final pass(es)
+    """
+    # Step 1: Preprocess
+    code_step1 = preprocess_code_python(raw_code)
+
+    # Step 2: Indentation fixes
+    code_step2 = code_step1
+    for _ in range(block_fix_passes):
+        code_step2 = fix_block_indentation_python(code_step2, indent_size=4)
+
+    # Step 3: autopep8 (two passes)
+    try:
+        pass1 = autopep8.fix_code(
+            code_step2,
+            options={
+                "aggressive": 2,
+                "experimental": True,
+                "indent_size": 4
+            }
+        )
+        pass2 = autopep8.fix_code(
+            pass1,
+            options={
+                "aggressive": 2,
+                "experimental": True,
+                "indent_size": 4
+            }
+        )
+        return pass2
+    except Exception as e:
+        # If autopep8 fails (e.g., syntax error), return partial result
+        return code_step2
+
+
+def minimal_cleanup_for_non_python(raw_code: str) -> str:
+    """
+    A minimal cleanup approach:
+      - Strip trailing spaces
+      - Remove excessive empty lines
+    """
+    lines = raw_code.split("\n")
+    lines = [line.rstrip() for line in lines]
+    cleaned_lines = []
+    last_line_blank = False
+    for line in lines:
+        if line.strip() == "":
+            if last_line_blank:
+                continue
+            last_line_blank = True
+        else:
+            last_line_blank = False
+        cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
+
+
+def format_sas_code(raw_code: str) -> str:
+    """
+    A basic formatter for SAS code:
+      - Cleans up extra spaces and empty lines.
+      - Applies simple block indentation based on common SAS keywords.
+    """
+    cleaned = minimal_cleanup_for_non_python(raw_code)
+    lines = cleaned.split("\n")
+    formatted_lines = []
+    indent_level = 0
+
+    # Keywords to start a block and to end a block in SAS
+    sas_block_start = ("proc ", "data ")
+    sas_block_end = ("run;", "quit;")
+
+    for line in lines:
+        stripped = line.strip()
+        lower_stripped = stripped.lower()
+        # Check if the line signals the end of a block
+        if any(lower_stripped.startswith(kw) for kw in sas_block_end):
+            indent_level = max(indent_level - 1, 0)
+            formatted_lines.append("    " * indent_level + stripped)
+        else:
+            formatted_lines.append("    " * indent_level + stripped)
+            if any(lower_stripped.startswith(kw) for kw in sas_block_start):
+                indent_level += 1
+
+    return "\n".join(formatted_lines)
+
+
+def format_vba_code(raw_code: str) -> str:
+    """
+    A basic formatter for VBA code:
+      - Cleans up extra spaces and empty lines.
+      - Applies simple block indentation based on common VBA block keywords.
+    """
+    cleaned = minimal_cleanup_for_non_python(raw_code)
+    lines = cleaned.split("\n")
+    formatted_lines = []
+    indent_level = 0
+
+    # Define VBA block starting and ending keywords
+    vba_block_start = ("sub ", "function ", "if ", "for ", "while ", "select case", "with")
+    vba_block_end = ("end sub", "end function", "end if", "next", "wend", "end select", "end with")
+
+    for line in lines:
+        stripped = line.strip()
+        lower_stripped = stripped.lower()
+        # Check if the line is a block-ending keyword
+        if any(lower_stripped.startswith(kw) for kw in vba_block_end):
+            indent_level = max(indent_level - 1, 0)
+            formatted_lines.append("    " * indent_level + stripped)
+        # Special handling for Else to align with If
+        elif lower_stripped == "else" or lower_stripped.startswith("else "):
+            indent_level = max(indent_level - 1, 0)
+            formatted_lines.append("    " * indent_level + stripped)
+            indent_level += 1
+        else:
+            formatted_lines.append("    " * indent_level + stripped)
+            if any(lower_stripped.startswith(kw) for kw in vba_block_start):
+                indent_level += 1
+
+    return "\n".join(formatted_lines)
+
+
 # --------------------- Main App Function --------------------- #
 def main():
     st.markdown('<div class="outer-page-container">', unsafe_allow_html=True)
-    st.title("Python Code Formatter Pro")
+    st.title("Multi-Language Code Formatter Pro")
     st.markdown(
         """
-        **Format, fix, and optimize your Python code effortlessly.**  
-        Upload, paste, or provide a URL to your Python code, and let the tool handle the rest.
+        **Format, fix, and optimize your code effortlessly**.  
+        Upload, paste, or provide a URL to your code, and let the tool handle the rest.
         """
     )
 
-    # Ensure these session variables exist
+    # Initialize session variables if not already set
     if "input_code" not in st.session_state:
-        st.session_state["input_code"] = ""  # For user input
+        st.session_state["input_code"] = ""
     if "formatted_code" not in st.session_state:
-        st.session_state["formatted_code"] = ""  # For processed output
+        st.session_state["formatted_code"] = ""
 
     st.markdown("---")
 
@@ -139,27 +279,23 @@ def main():
             horizontal=False
         )
 
-        # If user clicks Clear Input, we just reset the 'input_code' in session
         if st.button("🗑️ Clear Input"):
             st.session_state["input_code"] = ""
 
-        code_input_temp = st.session_state["input_code"]  # A temp local copy
+        code_input_temp = st.session_state["input_code"]
 
-        # We'll present the text area or handle file/URL below:
         if input_mode == "📋 Paste Code":
             code_input_temp = st.text_area(
-                "Paste your Python code below:",
+                "Paste your code below:",
                 value=code_input_temp,
                 height=300
             )
-
         elif input_mode == "📁 Upload File":
-            uploaded_file = st.file_uploader("Upload a .py file", type=["py"])
+            uploaded_file = st.file_uploader("Upload a source file", type=["py", "txt", "sas", "bas"])
             if uploaded_file is not None:
                 code_input_temp = uploaded_file.read().decode("utf-8")
-
         else:  # "🌐 Fetch from URL"
-            code_url = st.text_input("Enter the URL of your Python file:")
+            code_url = st.text_input("Enter the URL of your code file:")
             if code_url:
                 try:
                     response = requests.get(code_url)
@@ -170,81 +306,71 @@ def main():
                 except Exception as e:
                     st.error(f"Error fetching file: {e}")
 
-        # Update session state with the final input
         st.session_state["input_code"] = code_input_temp
 
     # =============== Section 2: Configuration =============== #
     with col_settings:
         st.subheader("⚙️ Configuration")
 
-        python_version = st.selectbox(
-            "Select Python Version",
-            ["Python 3.8", "Python 3.9", "Python 3.10"],
+        selected_language = st.selectbox(
+            "Select Programming Language",
+            ["Python", "SAS", "VBA"],
             index=0
         )
 
-        block_fix_passes = st.slider(
-            "Block Indentation Fix Passes",
-            min_value=0,
-            max_value=3,
-            value=1
-        )
+        block_fix_passes = 0
+        if selected_language == "Python":
+            block_fix_passes = st.slider(
+                "Block Indentation Fix Passes (Python only)",
+                min_value=0,
+                max_value=3,
+                value=1
+            )
 
         if st.button("✨ Format & Refine Code"):
             raw_code = st.session_state["input_code"].strip()
             if raw_code:
-                # Step 1: Preprocess uppercase keywords
-                step1_code = preprocess_code(raw_code)
-                # Step 2: Attempt block indentation fixes
-                step2_code = step1_code
-                for _ in range(block_fix_passes):
-                    step2_code = fix_block_indentation(step2_code, indent_size=4)
-                # Step 3: Attempt autopep8 formatting
-                try:
-                    pass1 = autopep8.fix_code(
-                        step2_code,
-                        options={
-                            "aggressive": 2,
-                            "experimental": True,
-                            "indent_size": 4
-                        }
-                    )
-                    pass2 = autopep8.fix_code(
-                        pass1,
-                        options={
-                            "aggressive": 2,
-                            "experimental": True,
-                            "indent_size": 4
-                        }
-                    )
-                    st.session_state["formatted_code"] = pass2
-                except Exception as e:
-                    st.warning(
-                        f"Auto-formatting failed due to syntax errors:\n{e}\n"
-                        "You may need to manually fix missing blocks or invalid statements."
-                    )
-                    st.session_state["formatted_code"] = step2_code
+                if selected_language == "Python":
+                    formatted = format_python_code(raw_code, block_fix_passes)
+                    st.session_state["formatted_code"] = formatted
+                elif selected_language == "SAS":
+                    formatted = format_sas_code(raw_code)
+                    st.session_state["formatted_code"] = formatted
+                elif selected_language == "VBA":
+                    formatted = format_vba_code(raw_code)
+                    st.session_state["formatted_code"] = formatted
+                else:
+                    st.warning("Unsupported language selected.")
             else:
                 st.warning("No code to format. Please paste or upload code.")
 
-    # =============== Section 3: Output =============== #
+    # =============== Section 3: Output & Download =============== #
     with col_output:
         st.subheader("📄 Output & Download")
 
-        st.code(st.session_state["formatted_code"], language="python", line_numbers=True)
+        # Place Clear Output and Download buttons right under the header
+        col_buttons = st.columns(2)
+        with col_buttons[0]:
+            if st.button("🗑️ Clear Output"):
+                st.session_state["formatted_code"] = ""
+        with col_buttons[1]:
+            st.download_button(
+                label="📥 Download Refined Code",
+                data=st.session_state["formatted_code"],
+                file_name="formatted_code.txt",
+                mime="text/plain",
+                disabled=(not st.session_state["formatted_code"].strip())
+            )
 
-        if st.button("🗑️ Clear Output"):
-            st.session_state["formatted_code"] = ""
+        # Apply syntax highlighting based on selected language
+        lang_map = {
+            "Python": "python",
+            "SAS": "sas",
+            "VBA": "vba"
+        }
+        highlight_language = lang_map.get(selected_language, "text")
+        st.code(st.session_state["formatted_code"], language=highlight_language, line_numbers=True)
 
-        st.download_button(
-            label="📥 Download Refined Code",
-            data=st.session_state["formatted_code"],
-            file_name="formatted_code.py",
-            mime="text/plain",
-            disabled=(not st.session_state["formatted_code"].strip())
-        )
-
-    # A bottom horizontal line inside the container
     st.markdown('<hr class="bottom-line" />', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
