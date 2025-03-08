@@ -4,7 +4,7 @@ import requests
 
 st.set_page_config(
     layout="wide",
-    page_title="Multi-Language Code Formatter Pro",
+    page_title="Multi-Language Code Formatter",
     page_icon=":snake:"
 )
 
